@@ -34,6 +34,14 @@ def normalize(name: str) -> str:
     return " ".join(ascii_name.lower().replace(".", " ").split())
 
 
+def match_station(name: str, by_name: dict[str, str]) -> str | None:
+    """Exact match, else the timetable name with a suffix: 'buftea' -> 'buftea hm'."""
+    if name in by_name:
+        return by_name[name]
+    hits = [sid for full, sid in by_name.items() if full.startswith(name + " ")]
+    return hits[0] if len(hits) == 1 else None
+
+
 def record(conn: sqlite3.Connection, source: str, train_no: str, service_date: date,
            raw: bytes, stops: list[LiveStop]) -> int:
     """Store the raw response and upsert one observation per stop matched to the timetable."""
@@ -44,11 +52,12 @@ def record(conn: sqlite3.Connection, source: str, train_no: str, service_date: d
             "SELECT st.station_id, st.name FROM scheduled_stops s "
             "JOIN stations st USING (station_id) WHERE s.train_no = ?", (train_no,))
     }
-    rows = [
-        (service_date.isoformat(), train_no, by_name[normalize(s.station_name)],
-         s.arr_delay, s.dep_delay, int(s.passed), source, now)
-        for s in stops if normalize(s.station_name) in by_name
-    ]
+    rows = []
+    for s in stops:
+        station_id = match_station(normalize(s.station_name), by_name)
+        if station_id:
+            rows.append((service_date.isoformat(), train_no, station_id,
+                         s.arr_delay, s.dep_delay, int(s.passed), source, now))
     with conn:
         conn.execute("INSERT INTO raw_snapshots (fetched_at, source, key, body_gz) VALUES (?, ?, ?, ?)",
                      (now, source, f"{service_date}/{train_no}", gzip.compress(raw)))
