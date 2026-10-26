@@ -1,0 +1,4 @@
+stop_id,stop_name,stop_lat,stop_lon
+10017,București Nord Gr.A,44.44,26.07
+10018,"Ploieşti Vest,",44.94,26.00
+10019,Braşov,45.66,25.61
