@@ -9,7 +9,8 @@ Phase 0: the **collector**, which builds the delay history the predictions will 
 
 - Timetable import: done, from the open data.gov.ro timetable.
 - Delay log and history stats: done, tested.
-- Live delay source: **not connected yet** (see "Live data").
+- Live delays: read from saved Infofer train pages (`import-page`); automatic fetching is not
+  possible yet (see "Live data").
 - API and Android app: later.
 
 ## Quick start
@@ -20,7 +21,8 @@ Needs Python 3.11+, no other dependencies (`pytest` for tests).
 git clone --depth 1 https://github.com/vasile/data.gov.ro-gtfs-exporter /tmp/gtfs
 python -m collector import-timetable /tmp/gtfs/gtfs-out
 python -m collector today            # how many trains run today
-python -m collector history 1621     # delay history for a train (needs live data)
+python -m collector import-page saved/*.html   # train pages saved from the browser (Ctrl+S)
+python -m collector history 1621     # delay history for a train
 python -m pytest
 ```
 
@@ -35,9 +37,12 @@ The database goes to `data/delays.sqlite` by default (`--db` to change it).
 - **Live data**: a source implements `LiveSource.fetch(train_no, date)` in `collector/sources/`
   and returns per-stop delays by station name; `live.record` matches names to the timetable,
   keeps the raw response gzipped, and freezes a stop's delay once the train has passed it.
-  No source is registered yet. Infofer's public pages forbid copying without written consent,
-  and EU Regulation 2017/1926 requires an official real-time feed for main lines since Dec 2025,
-  so the plan is to ask Informatica Feroviară for access first.
+  `collector/sources/infofer.py` parses the 'Trenul meu' page of mersultrenurilor.infofer.ro
+  (scheduled times, delay per stop, grey `*` values = estimates). That page loads its data
+  through a Cloudflare Turnstile check, so we don't fetch it automatically. Infofer's terms
+  also forbid copying without written consent, and EU Regulation 2017/1926 requires an official
+  real-time feed for main lines since Dec 2025, so the plan is to ask Informatica Feroviară
+  for access.
 
 ## Layout
 
@@ -46,5 +51,6 @@ The database goes to `data/delays.sqlite` by default (`--db` to change it).
 | `collector/db.py` | SQLite schema |
 | `collector/timetable.py` | GTFS import, which trains run on a date |
 | `collector/live.py` | live source interface, recording, which trains to poll now |
+| `collector/sources/infofer.py` | parser for saved Infofer train pages |
 | `collector/stats.py` | per-train delay history |
 | `collector/__main__.py` | command line |

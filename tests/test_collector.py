@@ -52,3 +52,15 @@ def test_history(conn):
         live.record(conn, "test", "1621", date(2026, 10, day), b"", [LiveStop("Brasov", delay, None, True)])
     h = stats.train_history(conn, "1621")
     assert h["runs"] == 3 and h["median_delay"] == 20 and h["late_30"] == 1
+
+
+def test_infofer_page_parsed_and_matched_to_timetable(conn):
+    from collector.sources.infofer import parse_train_page
+    page = (Path(__file__).parent / "fixtures" / "train_1621.html").read_text(encoding="utf-8")
+    train_no, day, stops = parse_train_page(page)
+    assert (train_no, day, len(stops)) == ("1621", date(2026, 10, 26), 17)
+    assert stops[0].station_name == "București Nord" and stops[0].dep_delay == 0
+    assert stops[-1].station_name == "Sibiu" and stops[-1].arr_delay == 3
+    assert all(s.passed for s in stops)
+    # All 3 fixture-timetable stations match despite different names (Gr.A, ş vs ș).
+    assert live.record(conn, "test", train_no, day, page.encode(), stops) == 3
