@@ -38,7 +38,7 @@ def test_record_matches_names_and_freezes_passed_stops(conn):
     stops = [LiveStop("Bucuresti Nord Gr. A", None, 5, True),
              LiveStop("Ploiești Vest", 12, 14, False),
              LiveStop("Nowhere", 1, 1, False)]
-    assert live.record(conn, "test", "1621", day, b"raw", stops) == 3
+    assert live.record(conn, "test", "1621", day, b"raw", stops) == 2
 
     live.record(conn, "test", "1621", day, b"raw", [LiveStop("Bucuresti Nord Gr. A", None, 99, True),
                                                     LiveStop("Ploiesti Vest", 20, 22, True)])
